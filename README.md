@@ -49,6 +49,46 @@ Sure is a fully working personal finance app that can be [self hosted with Docke
 Sure can be accessed from a browser, the macOS desktop app, the mobile app, API
 clients, and LLM agents. See [Sure Clients](docs/clients.md) for an overview.
 
+### Environment-based encryption
+
+Rails can encrypt supported sensitive database fields using these environment
+variables:
+
+- `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`
+- `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`
+- `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`
+
+For Docker deployments, store the keys in a private, Git-ignored `.env` file
+with owner-only permissions (`chmod 600 .env`). Explicitly pass all three
+variables through the shared application environment in your Compose file so
+both web and worker receive them; adding them to `.env` alone is insufficient.
+Never commit or print the keys. Preserve them across updates and restarts.
+
+With explicit encryption configured, Rails encrypts supported fields before
+writing them to PostgreSQL and decrypts them when reading. These include user
+email addresses and names, MFA secrets, and supported provider credentials and
+payloads. This does not encrypt every financial field, the whole database,
+network traffic, uploaded files, or backup files.
+
+Existing plaintext records need a controlled backfill. Back up the instance
+first, pause application writes, temporarily pass
+`ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=true`, and use the existing
+`security:backfill_encryption` task after reviewing its coverage. Disable that
+compatibility flag after verifying the backfill, decryption, and email lookup.
+Enabling keys alone does not encrypt existing rows. Existing encrypted data
+requires its original keys; do not replace them as part of this procedure.
+
+Full-instance backups include `.env` because recovering encrypted fields requires
+the original keys. Protect backups and encrypt off-site copies. Anyone with both
+the database and keys can decrypt protected fields; losing the keys can make
+those fields unrecoverable. See [backups and recovery](docs/hosting/docker.md#backups-upgrades-and-rollbacks).
+
+### Canadian finance consolidation proposal
+
+See the [local finance consolidation assessment](docs/finance-consolidation.md)
+for the proposed migration of local finance workflows, automated ingestion, and
+Canadian planning capabilities onto this fork.
+
 ## Forking and Attribution
 
 This repo is a community fork of the archived Maybe Finance repo.
