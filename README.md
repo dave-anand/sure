@@ -95,6 +95,9 @@ See the [local finance consolidation assessment](docs/finance-consolidation.md)
 for the proposed migration of local finance workflows, automated ingestion, and
 Canadian planning capabilities onto this fork.
 
+See [GitHub Actions on this fork](docs/hosting/github-actions.md) for automatic
+checks and manually triggered publishing workflows.
+
 ## Forking and Attribution
 
 This repo is a community fork of the archived Maybe Finance repo.

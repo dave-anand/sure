@@ -1,14 +1,4 @@
-# Reference: https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
-
-# Conditions for pushing the image to GHCR:
-#   - Triggered by push to default branch (`main`)
-#   - Triggered by push to a version tag (`v*`)
-#   - Triggered by a scheduled run
-#   - Triggered manually via `workflow_dispatch` with `push: true`
-#
-# Conditional expression:
-#   github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push
-
+# Publishing is opt-in on this fork; push=false only builds and validates.
 name: Publish Docker image
 
 on:
@@ -20,20 +10,10 @@ on:
         type: string 
         default: 'main'
       push:
-        description: 'Push the image to container registry'
+        description: 'Publish images and enable associated release jobs'
         required: false
         type: boolean
         default: false
-  push:
-    tags:
-      - 'v*'
-    branches:
-      - main
-    paths-ignore:
-      - 'charts/**'
-      - 'mobile/**'
-  schedule:
-    - cron: '30 1 * * *'
 
 env:
   REGISTRY: ghcr.io
@@ -84,6 +64,7 @@ jobs:
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Log in to the container registry
+        if: ${{ inputs.push }}
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -95,10 +76,7 @@ jobs:
         shell: bash
         run: |
           BASE_CONFIG="type=sha,format=long"
-          if [[ $GITHUB_EVENT_NAME == "schedule" ]]; then
-            BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly"
-            BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly-{{date 'ddd'}}"
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG_NAME="${GITHUB_REF#refs/tags/}"
             if [[ "$TAG_NAME" == v* ]]; then
               BASE_CONFIG="type=semver,pattern={{version}}"
@@ -134,7 +112,7 @@ jobs:
             org.opencontainers.image.title=Sure
             org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
 
-      - name: Publish 'linux/${{ matrix.platform }}' image by digest
+      - name: Build 'linux/${{ matrix.platform }}' image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         id: build
         with:
@@ -142,16 +120,16 @@ jobs:
           build-args: BUILD_COMMIT_SHA=${{ github.sha }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
+          cache-to: ${{ inputs.push && format('type=registry,ref={0}/{1}:cache-{2},mode=max', env.REGISTRY, env.IMAGE_NAME, matrix.platform) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
-          push: true
+          push: ${{ inputs.push }}
           # DO NOT REMOVE `oci-mediatypes=true`, fixes annotation not showing up on job.merge.steps[-1]
           # ref: https://github.com/docker/build-push-action/discussions/1022
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},name-canonical=true,push-by-digest=true,oci-mediatypes=true
+          outputs: ${{ inputs.push && format('type=image,name={0}/{1},name-canonical=true,push-by-digest=true,oci-mediatypes=true', env.REGISTRY, env.IMAGE_NAME) || '' }}
 
       - name: Export the Docker image digest
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
+        if: ${{ inputs.push }}
         run: |
           mkdir -p "${RUNNER_TEMP}"/digests
           echo "${DIGEST#sha256:}" > "${RUNNER_TEMP}/digests/digest-${PLATFORM}"
@@ -160,7 +138,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
 
       - name: Upload the Docker image digest
-        if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
+        if: ${{ inputs.push }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: digest-${{ matrix.platform }}
@@ -170,7 +148,7 @@ jobs:
 
   merge:
     name: Merge multi-arch manifest & push multi-arch tag
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
+    if: ${{ inputs.push }}
     needs: [build]
 
     timeout-minutes: 60
@@ -191,6 +169,7 @@ jobs:
           merge-multiple: true
 
       - name: Log in to the container registry
+        if: ${{ inputs.push }}
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -253,7 +232,7 @@ jobs:
 
   deploy_demo:
     name: Deploy alpha to Render demo
-    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-alpha.')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-alpha.')
     needs: [merge]
 
     timeout-minutes: 15
@@ -346,7 +325,7 @@ jobs:
 
   helm:
     name: Package Helm chart
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/helm-publish.yml
     with:
       chart_version: ${{ github.ref_name }}
@@ -356,19 +335,19 @@ jobs:
 
   mobile:
     name: Build Mobile Apps
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
   desktop:
     name: Build macOS Desktop App
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/desktop-release.yml
     secrets: inherit
 
   release:
     name: Create GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v')
     needs: [merge, mobile, desktop, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -477,7 +456,7 @@ jobs:
 
   create_release_branch:
     name: Create or update release branch
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
     needs: [release]
     runs-on: ubuntu-latest
 
@@ -508,7 +487,7 @@ jobs:
 
   bump-pre_release-version:
     name: Bump Pre-release Version
-    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc'))
+    if: inputs.push && startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc'))
     needs: [merge]
     runs-on: ubuntu-latest
     timeout-minutes: 10
