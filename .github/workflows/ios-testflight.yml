@@ -13,9 +13,6 @@ on:
         description: "TestFlight release notes"
         required: false
         type: string
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: read

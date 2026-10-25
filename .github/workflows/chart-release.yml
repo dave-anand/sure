@@ -1,9 +1,6 @@
 name: Chart Release
 
 on:
-  push:
-    tags:
-      - 'chart-v*'
   workflow_dispatch:
 
 permissions:
