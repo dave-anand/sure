@@ -202,6 +202,12 @@ class Sync < ApplicationRecord
         return
       end
 
+      if LocalFileMode.enabled? && !syncable.is_a?(Account) && !syncable.is_a?(Family)
+        mark_stale! if may_mark_stale?
+        update!(error: "External sync is disabled in local-file mode")
+        return
+      end
+
       start!
 
       begin

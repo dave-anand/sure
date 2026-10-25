@@ -6,6 +6,8 @@ class ApplicationController < ActionController::Base
   include Pundit::Authorization
   include CodespacesForgeryProtection
   include DailyWebUsageTracking
+  include LocalFileImportsOnly
+  before_action :enforce_local_file_web_policy
 
   include Pagy::Backend
 

@@ -801,6 +801,9 @@ Rails.application.routes.draw do
         post :chunks, on: :member, action: :create_chunk
         post :publish, on: :member
       end
+      resources :portfolio_snapshots, only: [ :create, :show ] do
+        post :preview, on: :collection
+      end
       resource :usage, only: [ :show ], controller: :usage
       resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal

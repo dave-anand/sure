@@ -91,6 +91,7 @@ class Provider::Factory
     # @param family [Family] The family to check connection availability for
     # @return [Array<Hash>] Array of connection configurations from all providers
     def connection_configs_for_account_type(account_type:, family:)
+      return [] if LocalFileMode.enabled?
       adapters_for_account_type(account_type).flat_map do |adapter_class|
         adapter_class.connection_configs(family: family)
       end

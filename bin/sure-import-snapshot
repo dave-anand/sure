@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+require "json"
+require "optparse"
+require_relative "../lib/portfolio_snapshot_client"
+
+options = { url: ENV["SURE_URL"], publish: false, allow_http: false }
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/sure-import-snapshot [options] snapshot.json"
+  opts.on("--url URL", "Sure application URL (or SURE_URL)") { |value| options[:url] = value }
+  opts.on("--publish", "Preview and publish; default is preview only") { options[:publish] = true }
+  opts.on("--status ID", "Read a previously published snapshot") { |value| options[:status] = value }
+  opts.on("--allow-http", "Allow an HTTP private deployment") { options[:allow_http] = true }
+end
+
+begin
+  parser.parse!
+  raise PortfolioSnapshotClient::Error, "Set SURE_URL or --url" if options[:url].to_s.empty?
+  client = PortfolioSnapshotClient.new(url: options[:url], api_key: ENV["SURE_API_KEY"], allow_http: options[:allow_http])
+  if options[:status]
+    raise PortfolioSnapshotClient::Error, "--status does not accept a file or --publish" if ARGV.any? || options[:publish]
+    result = client.status(options[:status])
+  else
+    raise PortfolioSnapshotClient::Error, parser.banner unless ARGV.size == 1
+    raise PortfolioSnapshotClient::Error, "Snapshot file exceeds 2 MB" if File.size(ARGV.first) > 2 * 1024 * 1024
+    payload = JSON.parse(File.read(ARGV.first))
+    result = options[:publish] ? client.publish(payload) : client.preview(payload)
+  end
+  puts JSON.pretty_generate(result)
+rescue PortfolioSnapshotClient::Error, OptionParser::ParseError, JSON::ParserError, SystemCallError => error
+  # Parser exceptions can contain source financial data; report only the class.
+  message = error.is_a?(JSON::ParserError) || error.is_a?(SystemCallError) ? error.class.name : error.message
+  warn message
+  exit 1
+end

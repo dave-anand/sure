@@ -171,6 +171,11 @@ class InvestmentStatement
     currency = family.currency
     account_ids = investment_account_ids
     return nil if account_ids.empty?
+    # Position observations do not explain contributions or withdrawals. A
+    # combined portfolio return would mistake those unknown flows for gains.
+    return nil if PortfolioSnapshot.joins(:portfolio_snapshot_connection)
+      .where(portfolio_snapshot_connections: { account_id: account_ids })
+      .where("portfolio_snapshots.as_of <= ?", period.date_range.end).exists?
 
     absolute_return = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([

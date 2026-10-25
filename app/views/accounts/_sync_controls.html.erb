@@ -12,7 +12,7 @@
         href: sync_all_accounts_path,
         disabled: family.syncing?,
         class: (family.syncing? ? "animate-spin" : nil),
-        "aria-label": t("accounts.index.sync"),
+        "aria-label": t(LocalFileMode.enabled? ? "accounts.index.recalculate" : "accounts.index.sync"),
         frame: :_top
       ) %>
 

@@ -5,6 +5,7 @@ Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
 Rails.configuration.x.posthog.development_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_DEVELOPMENT_ENABLED", "false"))
 # One environment gate for browser analytics, feedback, and configuration health.
 def (Rails.configuration.x.posthog).browser_enabled?
+  return false if Rails.configuration.x.local_file_imports_only
   Rails.env.production? || (Rails.env.development? && development_enabled)
 end
 
@@ -27,7 +28,7 @@ Rails.configuration.x.posthog.feedback_surveys = {
   }.freeze
 }.freeze
 
-if (api_key = Rails.configuration.x.posthog.api_key).present?
+if !Rails.configuration.x.local_file_imports_only && (api_key = Rails.configuration.x.posthog.api_key).present?
   # Initialize PostHog client
   $posthog = PostHog::Client.new({
     api_key: api_key,

@@ -8,6 +8,7 @@ class Account::MarketDataImporter
   # Prices are imported first so their currencies are known when deciding
   # which exchange rate pairs the account needs.
   def import_all
+    return if LocalFileMode.enabled?
     import_security_prices
     import_exchange_rates
   end

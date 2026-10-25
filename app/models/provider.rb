@@ -30,6 +30,7 @@ class Provider
     UsageData = Data.define(:used, :limit, :utilization, :plan)
 
     def with_provider_response(error_transformer: nil, &block)
+      raise LocalFileMode::ExternalIntegrationDisabled, "External integrations are disabled in local-file mode" if LocalFileMode.enabled?
       data = yield
 
       Response.new(

@@ -99,6 +99,7 @@ class Account::Syncer
     end
 
     def apply_provider_balance_overrides
+      return if LocalFileMode.enabled?
       return unless account.linked_to?("IbkrAccount")
 
       ibkr_account = account.account_providers.find_by(provider_type: "IbkrAccount")&.provider

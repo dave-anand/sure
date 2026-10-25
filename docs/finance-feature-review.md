@@ -154,6 +154,12 @@ forcing it into account balances. Identify missing fields explicitly.
 
 ## Prioritized delivery backlog
 
+The first implementation is described in [automated portfolio snapshots](api/portfolio-snapshots.md):
+explicit source mappings, reconciled account/position snapshots, guarded
+publication and replay, status reads and a standalone collector client. Legacy
+export conversion, mixed-currency positions, corrections and planning-engine
+integration remain later increments.
+
 | Order | Increment | Acceptance criteria |
 | --- | --- | --- |
 | 1 | Canonical source/mapping contract | Synthetic fixtures specify owner/person, source account IDs, dates, currency, decimal units, sign conversion, account cash versus holdings, basis provenance and current-versus-planned values. Cover same-file replacement changing source IDs and disagreement between legacy balance responses and transfer postings. Every feature above has a disposition; unresolved mappings produce review items. |

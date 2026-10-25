@@ -4,7 +4,7 @@ class AutoSyncScheduler < CronScheduler
   class << self
     private
       def job_name = JOB_NAME
-      def enabled? = Setting.auto_sync_enabled?
+      def enabled? = !LocalFileMode.enabled? && Setting.auto_sync_enabled?
       def enabled_log_label = "auto_sync_enabled"
       def time_setting = Setting.auto_sync_time
       def timezone_setting = Setting.auto_sync_timezone

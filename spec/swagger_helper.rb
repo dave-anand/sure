@@ -53,6 +53,62 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          PortfolioSnapshotInput: {
+            type: :object, additionalProperties: false,
+            required: %w[schema_version source source_account_id account_id as_of currency balance cash_balance holdings],
+            properties: {
+              schema_version: { type: :integer, enum: [ 1 ] },
+              source: { type: :string, minLength: 1, maxLength: 100 },
+              source_account_id: { type: :string, minLength: 1, maxLength: 255 },
+              account_id: { type: :string, format: :uuid },
+              as_of: { type: :string, format: :date, description: 'Observed date, no later than today. Dates are immutable per source account.' },
+              currency: { type: :string, enum: %w[CAD USD] },
+              balance: { type: :string, pattern: '^\d{1,15}(\.\d{1,4})?$', description: 'Total account value including cash, in the account currency.' },
+              cash_balance: { type: :string, pattern: '^\d{1,15}(\.\d{1,4})?$' },
+              holdings: {
+                type: :array, maxItems: 500,
+                items: {
+                  type: :object, additionalProperties: false,
+                  required: %w[source_security_id security_id quantity price amount],
+                  properties: {
+                    source_security_id: { type: :string, minLength: 1, maxLength: 255 },
+                    security_id: { type: :string, format: :uuid, description: 'Explicit mapping to an existing Sure security; stable across snapshots.' },
+                    quantity: { type: :string, pattern: '^\d{1,16}(\.\d{1,18})?$' },
+                    price: { type: :string, pattern: '^\d{1,15}(\.\d{1,4})?$' },
+                    amount: { type: :string, pattern: '^\d{1,15}(\.\d{1,4})?$', description: 'Quantity times price within 0.01; all positions use account currency.' },
+                    cost_basis_total: { type: :string, nullable: true, pattern: '^\d{1,15}(\.\d{1,4})?$', description: 'Total acquisition cost in account currency. Null means unknown, not zero or Canadian tax ACB.' }
+                  }
+                }
+              }
+            }
+          },
+          PortfolioSnapshotResponse: {
+            type: :object, required: %w[data],
+            properties: {
+              data: {
+                type: :object, required: %w[id status account_id source source_account_id as_of checksum balance cash_balance currency holdings_count],
+                properties: {
+                  id: { type: :string, format: :uuid }, status: { type: :string, enum: %w[complete] },
+                  account_id: { type: :string, format: :uuid }, source: { type: :string }, source_account_id: { type: :string },
+                  as_of: { type: :string, format: :date }, checksum: { type: :string },
+                  balance: { type: :string }, cash_balance: { type: :string }, currency: { type: :string }, holdings_count: { type: :integer }
+                }
+              }
+            }
+          },
+          PortfolioSnapshotPreviewResponse: {
+            type: :object, required: %w[data],
+            properties: {
+              data: {
+                type: :object, required: %w[revision checksum account_id as_of currency balance cash_balance holdings_count],
+                properties: {
+                  revision: { type: :string }, checksum: { type: :string }, account_id: { type: :string, format: :uuid },
+                  as_of: { type: :string, format: :date }, currency: { type: :string }, balance: { type: :string },
+                  cash_balance: { type: :string }, holdings_count: { type: :integer }
+                }
+              }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],
