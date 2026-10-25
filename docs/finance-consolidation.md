@@ -5,6 +5,10 @@ Assessed October 25, 2026 from the local source trees for Sure,
 assessment, not verification of their deployed instances or financial inputs.
 No private databases, browser storage, or financial exports were inspected.
 
+The subsequent [feature review and migration backlog](finance-feature-review.md)
+adds implementation evidence, executable verification, feature decisions and
+acceptance criteria. Use it to prioritize work before implementing import adapters.
+
 ## Recommendation
 
 Use Sure as the household financial system of record and common user interface.
