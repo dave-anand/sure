@@ -20,6 +20,10 @@ class AccountsController < ApplicationController
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
       .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
+    @portfolio_snapshot_accounts = Current.family.accounts
+      .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
+      .joins(:account_providers).where(account_providers: { provider_type: "PortfolioSnapshotConnection" })
+      .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
@@ -70,6 +74,10 @@ class AccountsController < ApplicationController
   end
 
   def new
+    if LocalFileMode.enabled?
+      @provider_configs = []
+      return
+    end
     # Get all registered providers with any credentials configured
     @provider_configs = Provider::Factory.registered_adapters.flat_map do |adapter_class|
       adapter_class.connection_configs(family: family)
@@ -79,7 +87,7 @@ class AccountsController < ApplicationController
   def sync_all
     family.request_plaid_transactions_refreshes_later(source: "AccountsController#sync_all")
     family.sync_later
-    redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
+    redirect_to accounts_path, notice: t(LocalFileMode.enabled? ? "accounts.sync_all.recalculating" : "accounts.sync_all.syncing")
   end
 
   def show
@@ -399,7 +407,10 @@ class AccountsController < ApplicationController
     end
 
     def ensure_linked_account
-      return if @account.linked?
+      if @account.linked?
+        head :forbidden unless @account.can_unlink?
+        return
+      end
 
       redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
     end
@@ -505,7 +516,7 @@ class AccountsController < ApplicationController
         @onchain_wallet_items
       ].flatten.compact
 
-      accounts = @manual_accounts.to_a + @financekit_accounts.to_a
+      accounts = @manual_accounts.to_a + @financekit_accounts.to_a + @portfolio_snapshot_accounts.to_a
       items.each do |item|
         next unless item.respond_to?(:accounts)
         accounts.concat(item.accounts)

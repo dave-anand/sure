@@ -33,6 +33,9 @@ class Family::Syncer
     # integrations participate in nightly family sync as soon as they include
     # Syncable and expose a `syncable` scope.
     def child_syncables
+      if LocalFileMode.enabled?
+        return (family.accounts.manual.to_a + family.accounts.joins(:portfolio_snapshot_connection).to_a).uniq(&:id)
+      end
       provider_items = syncable_item_associations.flat_map do |association|
         family.public_send(association).syncable
       end

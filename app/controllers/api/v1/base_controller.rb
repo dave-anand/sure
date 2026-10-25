@@ -24,6 +24,7 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
+  before_action :enforce_local_file_api_policy
   # Localize registers this before API authentication in ApplicationController.
   # Resolve the family zone only after the API identity has populated Current.
   skip_around_action :switch_timezone

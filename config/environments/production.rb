@@ -49,7 +49,7 @@ Rails.application.configure do
   config.assume_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_ASSUME_SSL", true))
 
   # Log to Logtail if API key is present, otherwise log to STDOUT
-  base_logger = if ENV["LOGTAIL_API_KEY"].present? && ENV["LOGTAIL_INGESTING_HOST"].present?
+  base_logger = if !config.x.local_file_imports_only && ENV["LOGTAIL_API_KEY"].present? && ENV["LOGTAIL_INGESTING_HOST"].present?
     Logtail::Logger.create_default_logger(
       ENV["LOGTAIL_API_KEY"],
       ingesting_host: ENV["LOGTAIL_INGESTING_HOST"]

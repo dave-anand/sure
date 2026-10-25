@@ -9,12 +9,27 @@ class Holding::CurrentForInvestmentAccounts
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
+      AND holdings.account_provider_id NOT IN (
+        SELECT id FROM account_providers WHERE provider_type = 'PortfolioSnapshotConnection'
+      )
       AND (holdings.account_id, holdings.updated_at::date) IN (
         SELECT provider_holdings.account_id, MAX(provider_holdings.updated_at::date)
         FROM holdings provider_holdings
         WHERE provider_holdings.account_id IN (:account_ids)
           AND provider_holdings.account_provider_id IS NOT NULL
         GROUP BY provider_holdings.account_id
+      )
+    ) OR (
+      holdings.account_provider_id IN (
+        SELECT id FROM account_providers WHERE provider_type = 'PortfolioSnapshotConnection'
+      )
+      AND (holdings.account_id, holdings.date) IN (
+        SELECT source_holdings.account_id, MAX(source_holdings.date)
+        FROM holdings source_holdings
+        JOIN account_providers ON account_providers.id = source_holdings.account_provider_id
+        WHERE source_holdings.account_id IN (:account_ids)
+          AND account_providers.provider_type = 'PortfolioSnapshotConnection'
+        GROUP BY source_holdings.account_id
       )
     ) OR holdings.id IN (
       SELECT DISTINCT ON (latest_holdings.account_id, latest_holdings.security_id) latest_holdings.id

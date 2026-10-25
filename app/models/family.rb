@@ -292,6 +292,7 @@ class Family < ApplicationRecord
   # sync after the cursor advances (or after the bounded polling fallback), so
   # fresh transactions are imported even if the baseline family sync runs first.
   def request_plaid_transactions_refreshes_later(source:)
+    return if LocalFileMode.enabled?
     enqueued_job = PlaidTransactionsRefreshAllJob.perform_later(self, source: source)
     return enqueued_job if enqueued_job
 

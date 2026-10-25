@@ -55,15 +55,22 @@ en:
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
     index:
       accounts: Accounts
+      local_file_mode_title: Local files only
+      local_file_mode_description: Live bank connections and external market-data services are disabled. Import local files to update your accounts.
+      recalculate: Recalculate local accounts
       financekit_accounts:
         title: Apple Wallet
         description: Manage Apple Wallet connections and sync in the Sure iOS app.
+      portfolio_snapshot_accounts:
+        title: Portfolio snapshots
+        description: Observed investment balances and positions from your connected exports.
       cancel_sync: Cancel sync
       manual_accounts:
         other_accounts: Other accounts
       new_account: New account
       sync: Sync all
     sync_all:
+      recalculating: Recalculating local accounts...
       syncing: "Syncing accounts..."
     new:
       import_accounts: Import accounts

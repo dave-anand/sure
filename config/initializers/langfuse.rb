@@ -1,6 +1,6 @@
 require "langfuse_tracing"
 
-if ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
+if !Rails.configuration.x.local_file_imports_only && ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
   Rails.configuration.x.langfuse = LangfuseTracing.new(
     public_key: ENV.fetch("LANGFUSE_PUBLIC_KEY"),
     secret_key: ENV.fetch("LANGFUSE_SECRET_KEY"),

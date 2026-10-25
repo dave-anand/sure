@@ -1,4 +1,11 @@
 class ApplicationJob < ActiveJob::Base
+  around_perform do |job, block|
+    if LocalFileMode.enabled? && LocalFileMode.external_job?(job)
+      Rails.logger.info("Skipped external integration job in local-file mode: #{job.class.name}")
+    else
+      block.call
+    end
+  end
   # Defer enqueuing until the surrounding Active Record transaction commits, so a
   # job is never picked up by a worker before the records it references (by
   # GlobalID) are committed and visible on the worker's connection — and is

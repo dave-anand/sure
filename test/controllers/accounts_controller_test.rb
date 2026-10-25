@@ -1,6 +1,28 @@
 require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
+  test "snapshot publisher accounts remain visible without exposing unshared accounts" do
+    user = users(:family_admin)
+    sign_in user
+    account = user.family.accounts.create!(name: "Published snapshot account", owner: user,
+      accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
+    payload = PortfolioSnapshot::Payload.new({ schema_version: 1, source: "index-fixture", source_account_id: "index-1",
+      account_id: account.id, as_of: Date.current.iso8601, currency: "USD", balance: "100", cash_balance: "100", holdings: [] })
+    publisher = PortfolioSnapshot::Publisher.new(user: user, payload: payload)
+    publisher.publish!(expected_revision: publisher.preview[:revision])
+    get accounts_url
+    assert_response :success
+    assert_select "#portfolio-snapshot-accounts", text: /Published snapshot account/
+    get confirm_unlink_account_url(account)
+    assert_response :forbidden
+    assert account.reload.linked?
+    account.update!(owner: users(:family_member))
+    get accounts_url
+    assert_response :success
+    assert_select "#portfolio-snapshot-accounts", count: 0
+    assert_no_match account.name, response.body
+  end
+
   include ActionView::RecordIdentifier
   include OnchainTestHelper
   include EntriesTestHelper
@@ -9,6 +31,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
+  end
+
+  test "local file mode shows policy and redirects provider settings" do
+    previous = Rails.application.config.x.local_file_imports_only
+    Rails.application.config.x.local_file_imports_only = true
+    get accounts_url
+    assert_response :success
+    assert_match "Local files only", response.body
+    get settings_providers_url
+    assert_redirected_to accounts_url
+    get new_account_url
+    assert_response :success
+    assert_select "a[href*='simplefin']", count: 0
+  ensure
+    Rails.application.config.x.local_file_imports_only = previous
   end
 
   test "should get index" do

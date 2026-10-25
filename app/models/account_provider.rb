@@ -7,7 +7,7 @@ class AccountProvider < ApplicationRecord
   validates :account_id, uniqueness: { scope: :provider_type }
   validates :provider_id, uniqueness: { scope: :provider_type }
 
-  validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
+  validate :exclusive_publisher_has_one_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -35,18 +35,19 @@ class AccountProvider < ApplicationRecord
 
   private
 
-    def financekit_has_exclusive_writer
+    def exclusive_publisher_has_one_writer
       # belongs_to :account already reports a missing account; bail out rather
       # than dereference it below.
       return if account.nil?
       # Every provider link takes the same canonical-account lock. This closes
-      # the race between FinanceKit mapping and another provider's setup flow.
+      # the race between an exclusive publisher and another provider's setup flow.
       Account.where(id: account_id).lock.pick(:id)
       others = self.class.where(account_id: account_id).where.not(id: id)
-      conflict = provider_type == "FinancekitAccountLineage" ? others.exists? : others.where(provider_type: "FinancekitAccountLineage").exists?
-      errors.add(:account, "already has an exclusive FinanceKit publisher") if conflict
-      if provider_type == "FinancekitAccountLineage" && provider&.family_id != account.family_id
-        errors.add(:account, "must belong to the FinanceKit enrollment family")
+      exclusive_types = %w[FinancekitAccountLineage PortfolioSnapshotConnection]
+      conflict = exclusive_types.include?(provider_type) ? others.exists? : others.where(provider_type: exclusive_types).exists?
+      errors.add(:account, "already has an exclusive publisher") if conflict
+      if exclusive_types.include?(provider_type) && provider&.family_id != account.family_id
+        errors.add(:account, "must belong to the publisher's family")
       end
     end
 

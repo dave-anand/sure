@@ -13,6 +13,7 @@ class Provider::Registry
     end
 
     def get_provider(name)
+      return nil if LocalFileMode.enabled?
       send(name)
     rescue NoMethodError
       raise Error.new("Provider '#{name}' not found in registry")
@@ -36,6 +37,7 @@ class Provider::Registry
     end
 
     def plaid_provider_for_region(region)
+      return nil if LocalFileMode.enabled?
       region.to_sym == :us ? plaid_us : plaid_eu
     end
 
@@ -211,6 +213,7 @@ class Provider::Registry
   end
 
   def providers
+    return [] if LocalFileMode.enabled?
     available_providers.map { |p| self.class.send(p) }.compact
   end
 
@@ -220,6 +223,7 @@ class Provider::Registry
   end
 
   def get_provider(name)
+    return nil if LocalFileMode.enabled?
     provider_method = available_providers.find { |p| p == name.to_sym }
 
     raise Error.new("Provider '#{name}' not found for concept: #{concept}") unless provider_method.present?

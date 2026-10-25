@@ -85,6 +85,12 @@ those fields unrecoverable. See [backups and recovery](docs/hosting/docker.md#ba
 
 ### Canadian finance consolidation proposal
 
+This fork supports **local file imports only** with
+`LOCAL_FILE_IMPORTS_ONLY=true` (the Docker default). This disables live bank
+connections, queued provider jobs, and external price/FX/property data fetches,
+while preserving existing data and local calculations. See the
+[import API and deployment notes](docs/api/portfolio-snapshots.md#local-file-only-deployments).
+
 See the [local finance consolidation assessment](docs/finance-consolidation.md)
 for the proposed migration of local finance workflows, automated ingestion, and
 Canadian planning capabilities onto this fork.

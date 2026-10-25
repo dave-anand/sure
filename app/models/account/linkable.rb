@@ -94,4 +94,10 @@ module Account::Linkable
 
     providers.all?(&:can_delete_holdings?)
   end
+
+  # Detaching a snapshot writer would make normal manual sync delete its
+  # authoritative holdings. Conversion needs an explicit retention workflow.
+  def can_unlink?
+    linked? && account_providers.none? { |provider| provider.provider_type == "PortfolioSnapshotConnection" }
+  end
 end

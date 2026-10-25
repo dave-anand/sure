@@ -71,6 +71,7 @@ class Setting < RailsSettings::Base
   end
 
   def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
+    return nil if LocalFileMode.enabled?
     return nil if identifier.blank? || brand_fetch_client_id.blank?
 
     w = width || brand_fetch_logo_size

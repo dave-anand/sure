@@ -1,4 +1,4 @@
-if ENV["SENTRY_DSN"].present?
+if ENV["SENTRY_DSN"].present? && !Rails.configuration.x.local_file_imports_only
   Sentry.init do |config|
     config.dsn = ENV["SENTRY_DSN"]
     config.environment = ENV["RAILS_ENV"]

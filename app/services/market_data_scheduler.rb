@@ -28,7 +28,7 @@ class MarketDataScheduler < CronScheduler
 
     private
       def job_name = JOB_NAME
-      def enabled? = Setting.market_data_sync_enabled?
+      def enabled? = !LocalFileMode.enabled? && Setting.market_data_sync_enabled?
       def enabled_log_label = "market_data_sync_enabled"
       def time_setting = Setting.market_data_sync_time
       def timezone_setting = Setting.market_data_sync_timezone

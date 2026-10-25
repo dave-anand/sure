@@ -92,7 +92,9 @@
                   data: { turbo_frame: :modal }
                 ) %>
               <% end %>
-              <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
+              <% if account.can_unlink? %>
+                <% menu.with_item(variant: "link", text: t("accounts.account.unlink_provider"), href: confirm_unlink_account_path(account), icon: "unlink", data: { turbo_frame: :modal }) %>
+              <% end %>
             <% end %>
           <% end %>
 

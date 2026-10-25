@@ -11,6 +11,7 @@ class MarketDataImporter
   end
 
   def import_all
+    return if LocalFileMode.enabled?
     import_security_prices
     import_exchange_rates
   end

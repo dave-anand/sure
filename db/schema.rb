@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1959,6 +1959,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
+  create_table "portfolio_snapshot_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.date "last_snapshot_on"
+    t.jsonb "security_mappings", default: {}, null: false
+    t.string "source", limit: 100, null: false
+    t.string "source_account_id", limit: 255, null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_portfolio_snapshot_connections_on_account_id", unique: true
+    t.index ["family_id", "source", "source_account_id"], name: "idx_portfolio_snapshot_source_identity", unique: true
+    t.index ["family_id"], name: "index_portfolio_snapshot_connections_on_family_id"
+  end
+
+  create_table "portfolio_snapshots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.date "as_of", null: false
+    t.string "checksum", limit: 64, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "payload", null: false
+    t.uuid "portfolio_snapshot_connection_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["portfolio_snapshot_connection_id", "as_of"], name: "idx_portfolio_snapshots_connection_date", unique: true
+    t.index ["portfolio_snapshot_connection_id"], name: "idx_portfolio_snapshots_connection"
+  end
+
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "area_unit"
     t.integer "area_value"
@@ -3088,6 +3113,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "portfolio_snapshot_connections", "accounts"
+  add_foreign_key "portfolio_snapshot_connections", "families"
+  add_foreign_key "portfolio_snapshots", "portfolio_snapshot_connections"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"

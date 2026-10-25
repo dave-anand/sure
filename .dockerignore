@@ -11,6 +11,9 @@
 /.env*
 !/.env*.erb
 
+# Native backups contain financial records and deployment secrets.
+/backups/
+
 # Ignore all default key files.
 /config/master.key
 /config/credentials/*.key

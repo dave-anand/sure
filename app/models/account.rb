@@ -15,6 +15,8 @@ class Account < ApplicationRecord
   belongs_to :owner, class_name: "User", optional: true
   belongs_to :import, optional: true
 
+  has_one :portfolio_snapshot_connection, dependent: :destroy
+
   has_many :account_shares, dependent: :destroy
   has_many :shared_users, through: :account_shares, source: :user
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
@@ -670,6 +672,9 @@ class Account < ApplicationRecord
   end
 
   def logo_url
+    if LocalFileMode.enabled?
+      return logo.attached? ? Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true) : nil
+    end
     if institution_domain.present? && Setting.brand_fetch_client_id.present?
       logo_size = Setting.brand_fetch_logo_size
 
