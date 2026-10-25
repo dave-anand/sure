@@ -16,7 +16,7 @@ experience need not require rewriting a tested engine in Ruby immediately.
 
 This changes the original sequence: integrate the existing Canadian planning
 engine after ingestion and reconciliation are reliable, rather than rebuilding
-retirement planning from scratch. Keep the existing backup/restore repair and
+retirement planning from scratch. Keep backup/restore verification and
 demonstration-account evaluation ahead of data migration.
 
 ## Findings from implementation
@@ -61,8 +61,24 @@ import contracts for source identifiers, overlapping statements and revised data
 
 ## Delivery plan
 
-1. **Finish the operational baseline.** Fix the observed PostgreSQL 17-client /
-   PostgreSQL 16 restore incompatibility, verify unmodified recovery, preserve
+### Recovery verification: October 25, 2026
+
+The deployed, unmodified `bin/sure-backup restore` successfully restored a
+post-encryption backup into a disposable database and a separate file-storage
+volume. Checksum validation passed, and Rails decrypted the restored user's
+email and resolved its deterministic email lookup. Temporary resources were
+removed, and the live application's health endpoint returned HTTP 200.
+
+The shipped script already handles a PostgreSQL 17 restore client targeting a
+PostgreSQL 16 server by filtering the unsupported `transaction_timeout` setting
+from generated SQL. An earlier direct `pg_restore` probe bypassed that handling;
+its failure was not evidence of a defect in Sure's restore command. No restore
+code change or release was required. A full fresh-host recovery, including
+deployment configuration and browser login, remains a separate verification.
+
+### Remaining increments
+
+1. **Finish the operational baseline.** Verify unmodified recovery, preserve
    encryption keys, and evaluate six demonstration accounts. Keep real migration
    data separate from the aggregate demonstration portfolio.
 2. **Inventory and map data.** Capture read-only exports from both applications,
